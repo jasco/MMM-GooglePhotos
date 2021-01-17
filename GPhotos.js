@@ -8,7 +8,7 @@ const fs = require('fs')
 const path = require('path')
 const mkdirp = require('mkdirp')
 const {OAuth2Client} = require('google-auth-library')
-const Axios = require('axios')
+const gaxios = require('gaxios');
 const moment = require('moment')
 
 function sleep(ms=1000) {
@@ -165,7 +165,7 @@ class GPhotos {
         }
         if (params) option.params = params
         if (data) option.data = data
-        Axios(option).then((ret)=>{
+        gaxios.request(option).then((ret)=>{
           resolve(ret)
         }).catch((e)=>{
           this.log(e.toString())
@@ -366,7 +366,7 @@ class GPhotos {
               },
             }
             option.data = newFile
-            Axios(option).then((ret)=>{
+            gaxios.request(option).then((ret)=>{
               resolve(ret.data)
             }).catch((e)=>{
               this.log(".upload:resultResolving ", e.toString())
