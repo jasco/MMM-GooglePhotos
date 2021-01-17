@@ -90,7 +90,11 @@ Module.register("MMM-GooglePhotos", {
     }
     var target = this.scanned[this.index]
     var url = target.baseUrl + `=w${this.config.showWidth}-h${this.config.showHeight}`
-    this.ready(url, target)
+    if (target.mediaMetadata.hasOwnProperty("video")) {
+      this.readyVideo(url, target)
+    } else {
+      this.ready(url, target)
+    }
     this.index++
     this.updateTimer = setTimeout(()=>{
       this.updatePhotos()
@@ -160,6 +164,76 @@ Module.register("MMM-GooglePhotos", {
       this.sendSocketNotification("IMAGE_LOADED", url)
     }
     hidden.src = url
+  },
+
+
+  readyVideo: function(url, target) {
+    var hidden = document.createElement("video")
+    hidden.setAttribute("autoplay", "autoplay")
+    var src = document.createElement("source")
+    src.type = "video/mp4"
+    hidden.appendChild(src)
+    src.addEventListener("error", (evt) => {
+      console.log("[GPHOTO] Video load fails.")
+      this.sendSocketNotification("IMAGE_LOAD_FAIL", url)
+    })
+    src.addEventListener("loadeddata", (evt) => {
+      var back = document.getElementById("GPHOTO_BACK")
+      var current = document.getElementById("GPHOTO_CURRENT")
+      //current.classList.remove("animated")
+      var dom = document.getElementById("GPHOTO")
+      back.style.backgroundImage = `url(${url})`
+      current.style.backgroundImage = `url(${url})`
+      current.classList.add("animated")
+      var info = document.getElementById("GPHOTO_INFO")
+      var album = this.albums.find((a)=>{
+        if (a.id == target._albumId) return true
+        return false
+      })
+      if (this.config.autoInfoPosition) {
+        var op = (album, target) => {
+          var now = new Date()
+          var q = Math.floor(now.getMinutes() / 15)
+          var r = [
+            [0,       'none',   'none',   0     ],
+            ['none',  'none',   0,        0     ],
+            ['none',  0,        0,        'none'],
+            [0,       0,        'none',   'none'],
+          ]
+          return r[q]
+        }
+        if (typeof this.config.autoInfoPosition == 'function') {
+          op = this.config.autoInfoPosition
+        }
+        let [top, left, bottom, right] = op(album, target)
+        info.style.setProperty('--top', top)
+        info.style.setProperty('--left', left)
+        info.style.setProperty('--bottom', bottom)
+        info.style.setProperty('--right', right)
+      }
+      info.innerHTML = ""
+      var albumCover = document.createElement("div")
+      albumCover.classList.add("albumCover")
+      albumCover.style.backgroundImage = `url(modules/MMM-GooglePhotos/cache/${album.id})`
+      var albumTitle = document.createElement("div")
+      albumTitle.classList.add("albumTitle")
+      albumTitle.innerHTML = album.title
+      var photoTime = document.createElement("div")
+      photoTime.classList.add("photoTime")
+      photoTime.innerHTML = (this.config.timeFormat == "relative")
+        ? moment(target.mediaMetadata.creationTime).fromNow()
+        : moment(target.mediaMetadata.creationTime).format(this.config.timeFormat)
+      var infoText = document.createElement("div")
+      infoText.classList.add("infoText")
+
+      info.appendChild(albumCover)
+      infoText.appendChild(albumTitle)
+      infoText.appendChild(photoTime)
+      info.appendChild(infoText)
+      console.log("[GPHOTO] Image loaded:", url)
+      this.sendSocketNotification("IMAGE_LOADED", url)
+    })
+    src.src = url
   },
 
 
