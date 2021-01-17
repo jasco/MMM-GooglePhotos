@@ -51,6 +51,8 @@ function Auth(config, debug=false) {
           log("Token is refreshed.")
           this.emit('ready', oauthClient)
         })
+      }).catch((error) => {
+          log("Error refreshing token, ", error.toString())
       })
     } else {
       log("Token is alive.")
