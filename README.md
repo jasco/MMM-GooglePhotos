@@ -232,4 +232,4 @@ autoInfoPosition: (album, photo)=> {
 
 ## Last Tested;
 - MagicMirror : v2.10.0
-- node.js : required over v8.
+- node.js : required over v10.
