@@ -89,9 +89,12 @@ Module.register("MMM-GooglePhotos", {
       }
     }
     var target = this.scanned[this.index]
+    console.log("target: ", target)
     var url = target.baseUrl + `=w${this.config.showWidth}-h${this.config.showHeight}`
     if (target.mediaMetadata.hasOwnProperty("video")) {
-      this.readyVideo(url, target)
+      var videoUrl = target.baseUrl + "=dv"
+      console.log("Show video")
+      this.readyVideo(url, videoUrl, target)
     } else {
       this.ready(url, target)
     }
@@ -102,6 +105,7 @@ Module.register("MMM-GooglePhotos", {
   },
 
   ready: function(url, target) {
+    document.getElementById("GPHOTO_CURRENT").innerHTML = ''
     var hidden = document.createElement("img")
     hidden.onerror = () => {
       console.log("[GPHOTO] Image load fails.")
@@ -167,23 +171,35 @@ Module.register("MMM-GooglePhotos", {
   },
 
 
-  readyVideo: function(url, target) {
-    var hidden = document.createElement("video")
-    hidden.setAttribute("autoplay", "autoplay")
+  readyVideo: function(url, videoUrl, target) {
+    var hidden = document.createElement("img")
+    var video = document.createElement("video")
+    document.getElementById("GPHOTO_CURRENT").innerHTML = ''
+    document.getElementById("GPHOTO_CURRENT").appendChild(video)
+    video.setAttribute("autoplay", "autoplay")
+    video.setAttribute("muted", "muted")
+    video.setAttribute("controls", "controls")
+    video.setAttribute("loop", "loop")
+    video.setAttribute("width", this.config.showWidth);
+    video.setAttribute("height", this.config.showHeight);
     var src = document.createElement("source")
-    src.type = "video/mp4"
-    hidden.appendChild(src)
+    src.type = target.mimeType
+    video.appendChild(src)
     src.addEventListener("error", (evt) => {
       console.log("[GPHOTO] Video load fails.")
-      this.sendSocketNotification("IMAGE_LOAD_FAIL", url)
+      this.sendSocketNotification("IMAGE_LOAD_FAIL", videoUrl)
     })
     src.addEventListener("loadeddata", (evt) => {
+      console.log("[GPHOTO] Video loaded:", videoUrl)
+      this.sendSocketNotification("IMAGE_LOADED", videoUrl)
+    })
+    hidden.onload = () => {
       var back = document.getElementById("GPHOTO_BACK")
       var current = document.getElementById("GPHOTO_CURRENT")
       //current.classList.remove("animated")
       var dom = document.getElementById("GPHOTO")
       back.style.backgroundImage = `url(${url})`
-      current.style.backgroundImage = `url(${url})`
+      current.style.backgroundImage = ''
       current.classList.add("animated")
       var info = document.getElementById("GPHOTO_INFO")
       var album = this.albums.find((a)=>{
@@ -230,10 +246,9 @@ Module.register("MMM-GooglePhotos", {
       infoText.appendChild(albumTitle)
       infoText.appendChild(photoTime)
       info.appendChild(infoText)
-      console.log("[GPHOTO] Image loaded:", url)
-      this.sendSocketNotification("IMAGE_LOADED", url)
-    })
-    src.src = url
+    }
+    src.setAttribute("src", videoUrl)
+    hidden.src = url
   },
 
 
