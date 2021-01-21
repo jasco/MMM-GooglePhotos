@@ -52,7 +52,7 @@ function Auth(config, debug=false) {
           this.emit('ready', oauthClient)
         })
       }).catch((error) => {
-          log("Error refreshing token, ", error.toString())
+        log("Error refreshing token, ", error.toString())
       })
     } else {
       log("Token is alive.")
@@ -315,7 +315,7 @@ class GPhotos {
           if (response.data.hasOwnProperty("mediaItemResults") && Array.isArray(response.data.mediaItemResults)) {
             for (var i = 0; i< response.data.mediaItemResults.length; i++) {
               if (response.data.mediaItemResults[i].hasOwnProperty("mediaItem")){
-                  items[i].baseUrl = response.data.mediaItemResults[i].mediaItem.baseUrl
+                items[i].baseUrl = response.data.mediaItemResults[i].mediaItem.baseUrl
               }
 
             }
@@ -461,10 +461,6 @@ class GPhotos {
       })
     })
   }
-
 }
-
-
-
 
 module.exports = GPhotos

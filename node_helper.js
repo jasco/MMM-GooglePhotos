@@ -81,74 +81,72 @@ module.exports = NodeHelper.create({
   },
 
   tryToIntitialize: async function() {
-
-    //set timer, in case if fails to retry in 1 min
+    // set timer, in case if fails to retry in 1 min
     clearTimeout(this.initializeTimer)
     this.initializeTimer = setTimeout(()=>{
       this.tryToIntitialize()
     }, 1*60*1000)
 
-
-      this.log("Starting Initialization")
-      this.log("Getting album list")
-      var albums = await this.getAlbums()
-      if (config.uploadAlbum) {
-        var uploadAlbum = albums.find((a)=>{
-          return (a.title == config.uploadAlbum) ? true : false
-        })
-        if (uploadAlbum) {
-          if (uploadAlbum.hasOwnProperty("shareInfo") && uploadAlbum.isWriteable) {
-            this.log("Confirmed Uploadable album:", config.uploadAlbum, uploadAlbum.id)
-            this.uploadAlbumId = uploadAlbum.id
-            this.sendSocketNotification("UPLOADABLE_ALBUM", config.uploadAlbum)
-          } else {
-            this.log("This album is not uploadable:", config.uploadAlbum)
-          }
-        } else {
-          this.log("Can't find uploadable album :", config.uploadAlbum)
-        }
-      }
-      for (var ta of this.config.albums) {
-        var matched = albums.find((a)=>{
-          if (ta == a.title) return true
-          return false
-        })
-        var exists = function (albums, album) {
-          return albums.some(expected => album.id === expected.id)
-        }
-        if (!matched) {
-          this.log(`Can't find "${ta}" in your album list.`)
-        } else if (!exists(this.albums, matched)) {
-          this.albums.push(matched)
-        }
-      }
-      this.log("Finish Album scanning. Properly scanned :", this.albums.length)
-      for (var a of this.albums) {
-        var url = a.coverPhotoBaseUrl + "=w160-h160-c"
-        var fpath = path.resolve(__dirname, "cache", a.id)
-        let file = fs.createWriteStream(fpath)
-        const request = https.get(url, (response)=>{
-          response.pipe(file)
-        })
-      }
-      this.log("Initialized")
-      this.sendSocketNotification("INITIALIZED", this.albums)
-
-	  //load cached list - if available
-      fs.readFile(this.path +"/cache/photoListCache.json", 'utf-8', (err,data) => {
-        if (err) { this.log('unable to load cache', err) }
-        else {
-          this.localPhotoList = JSON.parse(data.toString())
-          this.log("successfully loaded cache of ", this.localPhotoList.length, " photos")
-          this.prepAndSendChunk(5) //only 5 for extra fast startup
-        }
+    this.log("Starting Initialization")
+    this.log("Getting album list")
+    var albums = await this.getAlbums()
+    if (config.uploadAlbum) {
+      var uploadAlbum = albums.find((a)=>{
+        return (a.title == config.uploadAlbum) ? true : false
       })
+      if (uploadAlbum) {
+        if (uploadAlbum.hasOwnProperty("shareInfo") && uploadAlbum.isWriteable) {
+          this.log("Confirmed Uploadable album:", config.uploadAlbum, uploadAlbum.id)
+          this.uploadAlbumId = uploadAlbum.id
+          this.sendSocketNotification("UPLOADABLE_ALBUM", config.uploadAlbum)
+        } else {
+          this.log("This album is not uploadable:", config.uploadAlbum)
+        }
+      } else {
+        this.log("Can't find uploadable album :", config.uploadAlbum)
+      }
+    }
+    for (var ta of this.config.albums) {
+      var matched = albums.find((a)=>{
+        if (ta == a.title) return true
+        return false
+      })
+      var exists = function (albums, album) {
+        return albums.some(expected => album.id === expected.id)
+      }
+      if (!matched) {
+        this.log(`Can't find "${ta}" in your album list.`)
+      } else if (!exists(this.albums, matched)) {
+        this.albums.push(matched)
+      }
+    }
+    this.log("Finish Album scanning. Properly scanned :", this.albums.length)
+    for (var a of this.albums) {
+      var url = a.coverPhotoBaseUrl + "=w160-h160-c"
+      var fpath = path.resolve(__dirname, "cache", a.id)
+      let file = fs.createWriteStream(fpath)
+      const request = https.get(url, (response)=>{
+        response.pipe(file)
+      })
+    }
+    this.log("Initialized")
+    this.sendSocketNotification("INITIALIZED", this.albums)
 
-      this.log("Initialization complete!")
-      clearTimeout(this.initializeTimer)
-      this.log("Start first scanning.")
-      this.startScanning()
-    },
+    // load cached list - if available
+    fs.readFile(this.path +"/cache/photoListCache.json", 'utf-8', (err,data) => {
+      if (err) { this.log('unable to load cache', err) }
+      else {
+        this.localPhotoList = JSON.parse(data.toString())
+        this.log("successfully loaded cache of ", this.localPhotoList.length, " photos")
+        this.prepAndSendChunk(5) //only 5 for extra fast startup
+      }
+    })
+
+    this.log("Initialization complete!")
+    clearTimeout(this.initializeTimer)
+    this.log("Start first scanning.")
+    this.startScanning()
+  },
 
   prepAndSendChunk: async function(desiredChunk = 50) {
     try {
@@ -179,9 +177,9 @@ module.exports = NodeHelper.create({
       } else {
         this.log("couldn't send ", list.length, " pics")
       }
-     } catch (err) {
-       this.log("failed to refresh and send chunk: ", err)
-     }
+    } catch (err) {
+      this.log("failed to refresh and send chunk: ", err)
+    }
   },
 
 
@@ -292,8 +290,8 @@ module.exports = NodeHelper.create({
               } else { this.log('Photo list cache saved') }
             })
           }
-															
-														
+
+
           return(photos)
         } catch (err) {
           this.log(err.toString())
