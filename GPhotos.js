@@ -151,7 +151,7 @@ class GPhotos {
     })
   }
 
-  request (token, endPoint="", method="get", params=null, data=null) {
+  async request (token, endPoint="", method="get", params=null, data=null) {
     return new Promise((resolve)=>{
       try {
         var url = endPoint
@@ -178,7 +178,7 @@ class GPhotos {
     })
   }
 
-  getAlbums() {
+  async getAlbums() {
     return new Promise((resolve)=>{
       const step = async () =>{
         try {
@@ -201,7 +201,7 @@ class GPhotos {
   }
 
 
-  getAlbumType(type="albums") {
+  async getAlbumType(type="albums") {
     if (type !== "albums" && type !== "sharedAlbums") throw new Error("Invalid parameter for .getAlbumType()", type)
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
@@ -232,7 +232,7 @@ class GPhotos {
               resolve(list)
             }
           } catch(err) {
-            this.log(err.toString())
+            this.log('.getAlbumType(): ', err.toString())
             throw err
           }
         }
@@ -241,7 +241,7 @@ class GPhotos {
     })
   }
 
-  getImageFromAlbum(albumId, isValid=null, maxNum=99999) {
+  async getImageFromAlbum(albumId, isValid=null, maxNum=99999) {
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
@@ -331,7 +331,7 @@ class GPhotos {
   }
 
 
-  createAlbum(albumName) {
+  async createAlbum(albumName) {
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
@@ -354,7 +354,7 @@ class GPhotos {
     })
   }
 
-  shareAlbum(albumId) {
+  async shareAlbum(albumId) {
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
@@ -384,7 +384,7 @@ class GPhotos {
     })
   }
 
-  upload(path) {
+  async upload(path) {
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
@@ -422,7 +422,7 @@ class GPhotos {
     })
   }
 
-  create(uploadToken, albumId) {
+  async create(uploadToken, albumId) {
     return new Promise((resolve)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
