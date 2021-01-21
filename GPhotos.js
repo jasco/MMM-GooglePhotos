@@ -168,11 +168,11 @@ class GPhotos {
         gaxios.request(config).then((ret)=>{
           resolve(ret)
         }).catch((e)=>{
-          this.log(e.toString())
+          this.log(".request:resultResolving ", e.toString())
           throw e
         })
       } catch (error) {
-        this.log(error.toString())
+        this.log(".request ", e.toString())
         throw error
       }
     })
