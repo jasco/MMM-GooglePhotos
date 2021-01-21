@@ -23,6 +23,7 @@ Module.register("MMM-GooglePhotos", {
     showHeight: 1920,
     timeFormat: "YYYY/MM/DD HH:mm",
     autoInfoPosition: false,
+    supportVideo: false,
   },
 
   getStyles: function() {

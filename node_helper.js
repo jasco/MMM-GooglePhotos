@@ -242,7 +242,8 @@ module.exports = NodeHelper.create({
     var photoCondition = (photo) => {
       if (!photo.hasOwnProperty("mediaMetadata")) return false
       var data = photo.mediaMetadata
-      if (!data.hasOwnProperty("photo") && !data.hasOwnProperty("video")) return false
+      if (!data.hasOwnProperty("photo") && !(
+          this.config.supportVideo && data.hasOwnProperty("video"))) return false
       var ct = moment(data.creationTime)
       if (condition.fromDate && moment(condition.fromDate).isAfter(ct)) return false
       if (condition.toDate && moment(condition.toDate).isBefore(ct)) return false
