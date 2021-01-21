@@ -66,7 +66,9 @@ module.exports = NodeHelper.create({
         this.log("Upload Fails.")
       }
     }
-    step()
+    step().catch((err) => {
+        this.log('Error while uploading', err);
+    })
   },
 
   initializeAfterLoading: function(config) {
@@ -77,7 +79,9 @@ module.exports = NodeHelper.create({
       authOption: authOption,
       debug:this.debug
     })
-    this.tryToIntitialize()
+    this.tryToIntitialize().catch((err) => {
+        this.log('Error while initializing', err);
+    })
   },
 
   tryToIntitialize: async function() {
@@ -85,7 +89,9 @@ module.exports = NodeHelper.create({
     //set timer, in case if fails to retry in 1 min
     clearTimeout(this.initializeTimer)
     this.initializeTimer = setTimeout(()=>{
-      this.tryToIntitialize()
+      this.tryToIntitialize().catch((err) => {
+          this.log('Error on timed update', err);
+      })
     }, 1*60*1000)
 
 
