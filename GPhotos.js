@@ -298,11 +298,8 @@ class GPhotos {
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         this.log("received: ", items.length, " to refresh") //
-        var list = []
-        var params = new URLSearchParams();
-        var ii
-        for (ii in items) {
-          params.append("mediaItemIds", items[ii].id)
+        var params = {
+          mediaItemIds: items.map((ii) => ii.id)
         }
 
         const refr = async () => {
@@ -316,6 +313,7 @@ class GPhotos {
             }
             resolve(items)
           }
+          throw new Error('batchGet returned no results')
         }
         refr().catch((err) => {
           this.log(".updatetheseMediaItems(): ", err.toString())
