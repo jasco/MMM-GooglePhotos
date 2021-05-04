@@ -303,6 +303,7 @@ class GPhotos {
         // Deduplicate and match responses with items by id.
         var indicesById = items.reduce((acc, cur, index) => {
            acc[cur.id] = (acc[cur.id] || []).concat(index);
+           return acc;
         }, {});
         var token = client.credentials.access_token
         this.log("received: ", items.length, " to refresh") //
