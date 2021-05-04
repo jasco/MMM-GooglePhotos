@@ -1,4 +1,7 @@
 # MMM-GooglePhotos
+
+This is a fork from [ChrisAcrobat/MMM-GooglePhotos](https://github.com/ChrisAcrobat/MMM-GooglePhotos).
+
 Display your photos from album of Google Photos on MagicMirror
 
 ## Screenshot
