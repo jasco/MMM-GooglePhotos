@@ -299,10 +299,15 @@ class GPhotos {
       if (items.length <= 0) {resolve(items)}
 
       this.onAuthReady((client)=>{
+        // If batchGet includes duplicate IDs the request will fail with response 400.
+        // Deduplicate and match responses with items by id.
+        var indicesById = items.reduce((acc, cur, index) => {
+           acc[cur.id] = (acc[cur.id] || []).concat(index);
+        }, {});
         var token = client.credentials.access_token
         this.log("received: ", items.length, " to refresh") //
         var params = {
-          mediaItemIds: items.map((ii) => ii.id)
+          mediaItemIds: Object.keys(indicesById)
         }
 
         const refr = async () => {
@@ -311,7 +316,10 @@ class GPhotos {
           if (response.data.hasOwnProperty("mediaItemResults") && Array.isArray(response.data.mediaItemResults)) {
             for (var i = 0; i< response.data.mediaItemResults.length; i++) {
               if (response.data.mediaItemResults[i].hasOwnProperty("mediaItem")){
-                items[i].baseUrl = response.data.mediaItemResults[i].mediaItem.baseUrl
+                var indices = indicesById[response.data.mediaItemResults[i].mediaItem.id];
+                for (var j = 0; j < indices.length; j++) {
+                    items[indices[j]].baseUrl = response.data.mediaItemResults[i].mediaItem.baseUrl;
+                }
               }
             }
             resolve(items)
