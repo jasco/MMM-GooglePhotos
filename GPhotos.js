@@ -8,7 +8,7 @@ const fs = require('fs')
 const path = require('path')
 const mkdirp = require('mkdirp')
 const {OAuth2Client} = require('google-auth-library')
-const Axios = require('axios')
+const gaxios = require('gaxios');
 const moment = require('moment')
 
 function sleep(ms=1000) {
@@ -51,6 +51,8 @@ function Auth(config, debug=false) {
           log("Token is refreshed.")
           this.emit('ready', oauthClient)
         })
+      }).catch((error) => {
+        log("Error refreshing token, ", error.toString())
       })
     } else {
       log("Token is alive.")
@@ -150,10 +152,10 @@ class GPhotos {
   }
 
   request (token, endPoint="", method="get", params=null, data=null) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       try {
         var url = endPoint
-        var option = {
+        var config = {
           method: method,
           url: url,
           baseURL: 'https://photoslibrary.googleapis.com/v1/',
@@ -161,17 +163,17 @@ class GPhotos {
             Authorization: 'Bearer ' + token
           },
         }
-        if (params) option.params = params
-        if (data) option.data = data
-        Axios(option).then((ret)=>{
+        if (params) config.params = params
+        if (data) config.data = data
+        gaxios.request(config).then((ret)=>{
           resolve(ret)
         }).catch((e)=>{
-          this.log(e.toString())
-          throw e
+          this.log(".request:resultResolving ", e.toString())
+          reject(e)
         })
       } catch (error) {
-        this.log(error.toString())
-        throw error
+        this.log(".request ", e.toString())
+        reject(error)
       }
     })
   }
@@ -194,14 +196,14 @@ class GPhotos {
           throw e
         }
       }
-      step()
+      return step()
     })
   }
 
 
   getAlbumType(type="albums") {
     if (type !== "albums" && type !== "sharedAlbums") throw new Error("Invalid parameter for .getAlbumType()", type)
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         var list = []
@@ -212,219 +214,238 @@ class GPhotos {
             pageSize: pageSize,
             pageToken: pageToken,
           }
-          try {
-            var response = await this.request(token, type, "get", params, null)
-            var body = response.data
-            if (body[type] && Array.isArray(body[type])) {
-              found += body[type].length
-              list = list.concat(body[type])
+          var response = await this.request(token, type, "get", params, null)
+          var body = response.data
+          if (body[type] && Array.isArray(body[type])) {
+            found += body[type].length
+            list = list.concat(body[type])
+          }
+          if (body.nextPageToken) {
+            const generous = async () => {
+              await sleep(500)
+              return getAlbum(pageSize, body.nextPageToken)
             }
-            if (body.nextPageToken) {
-              const generous = async () => {
-                await sleep(500)
-                getAlbum(pageSize, body.nextPageToken)
-              }
-              generous()
-            } else {
-              this.albums[type] = list
-              resolve(list)
-            }
-          } catch(err) {
-            this.log(err.toString())
-            throw err
+            return generous()
+          } else {
+            this.albums[type] = list
+            resolve(list)
           }
         }
-        getAlbum()
+        getAlbum().catch((err) => {
+          this.log(".getAlbumType(): ", err.toString())
+          reject(err)
+        })
       })
     })
   }
 
   getImageFromAlbum(albumId, isValid=null, maxNum=99999) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         var list = []
         const getImage = async (pageSize=50, pageToken="") => {
-          this.log("Indexing photos now.")
-          try {
-            var data = {
-              "albumId": albumId,
-              "pageSize": pageSize,
-              "pageToken": pageToken,
-            }
-            var response = await this.request(token, 'mediaItems:search', 'post', null, data)
-            if (response.data.hasOwnProperty("mediaItems") && Array.isArray(response.data.mediaItems)) {
-              for (var item of response.data.mediaItems) {
-                if (list.length < maxNum) {
-                  item._albumId = albumId
-                  if (typeof isValid == "function") {
-                    if (isValid(item)) list.push(item)
-                  } else {
-                    list.push(item)
-                  }
-                }
-              }
-              if (list.length >= maxNum) {
-                resolve(list) // full with maxNum
-              } else {
-                if (response.data.nextPageToken) {
-                  const generous = async () => {
-                    await sleep(500)
-                    getImage(50, response.data.nextPageToken)
-                  }
-                  generous()
+          this.log("Indexing photos now. total: ", list.length)
+          var data = {
+            "albumId": albumId,
+            "pageSize": pageSize,
+            "pageToken": pageToken,
+          }
+          var response = await this.request(token, 'mediaItems:search', 'post', null, data)
+          if (response.data.hasOwnProperty("mediaItems") && Array.isArray(response.data.mediaItems)) {
+            for (var item of response.data.mediaItems) {
+              if (list.length < maxNum) {
+                item._albumId = albumId
+                if (typeof isValid == "function") {
+                  if (isValid(item)) list.push(item)
                 } else {
-                  resolve(list) // all found but lesser than maxNum
+                  list.push(item)
                 }
               }
-            } else {
-              resolve(list) // empty
             }
-          } catch(err) {
-            this.log(".getImageFromAlbum()", err.toString())
-            this.log(err)
-            throw err
+            if (list.length >= maxNum) {
+              resolve(list) // full with maxNum
+            } else {
+              if (response.data.nextPageToken) {
+                const generous = async () => {
+                  await sleep(500)
+                  return getImage(50, response.data.nextPageToken)
+                }
+                return generous()
+              } else {
+                resolve(list) // all found but lesser than maxNum
+              }
+            }
+          } else {
+            resolve(list) // empty
           }
         }
-        getImage()
+        getImage().catch((err) => {
+          this.log(".getImageFromAlbum(): ", err.toString())
+          this.log(err)
+          reject(err)
+        })
       })
     })
   }
 
+
+  async updateTheseMediaItems(items) {
+    return new Promise((resolve, reject)=>{
+
+      if (items.length <= 0) {resolve(items)}
+
+      this.onAuthReady((client)=>{
+        var token = client.credentials.access_token
+        this.log("received: ", items.length, " to refresh") //
+        var params = {
+          mediaItemIds: items.map((ii) => ii.id)
+        }
+
+        const refr = async () => {
+          var response = await this.request(token, 'mediaItems:batchGet', 'get', params, null)
+
+          if (response.data.hasOwnProperty("mediaItemResults") && Array.isArray(response.data.mediaItemResults)) {
+            for (var i = 0; i< response.data.mediaItemResults.length; i++) {
+              if (response.data.mediaItemResults[i].hasOwnProperty("mediaItem")){
+                items[i].baseUrl = response.data.mediaItemResults[i].mediaItem.baseUrl
+              }
+            }
+            resolve(items)
+          }
+          throw new Error('batchGet returned no results')
+        }
+        refr().catch((err) => {
+          this.log(".updatetheseMediaItems(): ", err.toString())
+          reject(err)
+        })
+      })
+    })
+  }
+
+
   createAlbum(albumName) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         const create = async () => {
-          try {
-            var created = await this.request(token, 'albums', 'post', null, {
-              album: {
-                title: albumName
-              }
-            })
-            resolve(created.data)
-          } catch(err) {
-            this.log(".createAlbum() ", err.toString())
-            this.log(err)
-            throw err
-          }
+          var created = await this.request(token, 'albums', 'post', null, {
+            album: {
+              title: albumName
+            }
+          })
+          resolve(created.data)
         }
-        create()
+        create().catch((err) => {
+          this.log(".createAlbum(): ", err.toString())
+          this.log(err)
+          reject(err)
+        })
       })
     })
   }
 
   shareAlbum(albumId) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         const create = async () => {
-          try {
-            var shareInfo = await this.request(
-              token,
-              'albums/' + albumId + ":share",
-              'post',
-              null,
-              {
-                sharedAlbumOptions: {
-                  isCollaborative: true,
-                  isCommentable: true,
-                }
+          var shareInfo = await this.request(
+            token,
+            'albums/' + albumId + ":share",
+            'post',
+            null,
+            {
+              sharedAlbumOptions: {
+                isCollaborative: true,
+                isCommentable: true,
               }
-            )
-            resolve(shareInfo.data)
-          } catch(err) {
-            this.log(".shareAlbum()", err.toString())
-            this.log(err)
-            throw err
-          }
+            }
+          )
+          resolve(shareInfo.data)
         }
-        create()
+        create().catch((err) => {
+          this.log(".shareAlbum(): ", err.toString())
+          this.log(err)
+          reject(err)
+        })
       })
     })
   }
 
   upload(path) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         const upload = async() => {
-          try {
-            let newFile = fs.createReadStream(path)
-            var url = 'uploads'
-            var option = {
-              method: 'post',
-              url: url,
-              baseURL: 'https://photoslibrary.googleapis.com/v1/',
-              headers: {
-                Authorization: 'Bearer ' + token,
-                "Content-type": "application/octet-stream",
-                //X-Goog-Upload-Content-Type: mime-type
-                "X-Goog-Upload-Protocol": "raw",
-              },
-            }
-            option.data = newFile
-            Axios(option).then((ret)=>{
-              resolve(ret.data)
-            }).catch((e)=>{
-              this.log(".upload:resultResolving ", e.toString())
-              this.log(e)
-              throw e
-            })
-          } catch(err) {
+          let newFile = fs.createReadStream(path)
+          var url = 'uploads'
+          var option = {
+            method: 'post',
+            url: url,
+            baseURL: 'https://photoslibrary.googleapis.com/v1/',
+            headers: {
+              Authorization: 'Bearer ' + token,
+              "Content-type": "application/octet-stream",
+              //X-Goog-Upload-Content-Type: mime-type
+              "X-Goog-Upload-Protocol": "raw",
+            },
+          }
+          option.data = newFile
+          return gaxios.request(option).then((ret)=>{
+            resolve(ret.data)
+          }).catch((e)=>{
+            this.log(".upload:resultResolving ", e.toString())
+            this.log(e)
+            throw e
+          })
+        }
+        upload().catch((err) => {
             this.log(".upload()", err.toString())
             this.log(err)
-            throw err
-          }
-        }
-        upload()
+          reject(err)
+        })
       })
     })
   }
 
   create(uploadToken, albumId) {
-    return new Promise((resolve)=>{
+    return new Promise((resolve, reject)=>{
       this.onAuthReady((client)=>{
         var token = client.credentials.access_token
         const create = async() => {
-          try {
-            let fileName = moment().format("[MM_]YYYYMMDD_HHmm")
-            var result = await this.request(
-              token,
-              'mediaItems:batchCreate',
-              'post',
-              null,
-              {
-                "albumId": albumId,
-                "newMediaItems": [
-                  {
-                    "description": "Uploaded by MMM-GooglePhotos",
-                    "simpleMediaItem": {
-                      "uploadToken": uploadToken,
-                      "fileName": fileName
-                    }
+          let fileName = moment().format("[MM_]YYYYMMDD_HHmm")
+          var result = await this.request(
+            token,
+            'mediaItems:batchCreate',
+            'post',
+            null,
+            {
+              "albumId": albumId,
+              "newMediaItems": [
+                {
+                  "description": "Uploaded by MMM-GooglePhotos",
+                  "simpleMediaItem": {
+                    "uploadToken": uploadToken,
+                    "fileName": fileName
                   }
-                ],
-                "albumPosition": {
-                  "position": "LAST_IN_ALBUM"
                 }
+              ],
+              "albumPosition": {
+                "position": "LAST_IN_ALBUM"
               }
-            )
-            resolve(result.data)
-          } catch(err) {
-            this.log(".create() ", err.toString())
-            this.log(err)
-            throw err
-          }
+            }
+          )
+          resolve(result.data)
         }
-        create()
+        create().catch((err) => {
+          this.log(".create(): ", err.toString())
+          this.log(err)
+          reject(err)
+        })
       })
     })
   }
-
 }
-
-
-
 
 module.exports = GPhotos
