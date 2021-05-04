@@ -324,8 +324,9 @@ class GPhotos {
               }
             }
             resolve(items)
+          } else {
+            throw new Error('batchGet returned no results')
           }
-          throw new Error('batchGet returned no results')
         }
         refr().catch((err) => {
           this.log(".updateTheseMediaItems(): ", err.toString())
