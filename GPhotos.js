@@ -169,6 +169,9 @@ class GPhotos {
           resolve(ret)
         }).catch((e)=>{
           this.log(".request:resultResolving ", e.toString())
+          if (e.response && e.response.data) {
+            this.log(".request:resultResolving.response ", e.response.data);
+          }
           reject(e)
         })
       } catch (error) {
