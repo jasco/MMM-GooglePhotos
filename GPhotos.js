@@ -328,7 +328,7 @@ class GPhotos {
           throw new Error('batchGet returned no results')
         }
         refr().catch((err) => {
-          this.log(".updatetheseMediaItems(): ", err.toString())
+          this.log(".updateTheseMediaItems(): ", err.toString())
           reject(err)
         })
       })
