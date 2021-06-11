@@ -42,7 +42,7 @@ Module.register("MMM-GooglePhotos", {
     this.config.condition = Object.assign({}, this.defaults.condition, this.config.condition)
     this.sendSocketNotification("INIT", this.config)
     this.dynamicPosition = 0
-
+    this.errorFlag = false
   },
 
   socketNotificationReceived: function(noti, payload) {
@@ -76,6 +76,9 @@ Module.register("MMM-GooglePhotos", {
     }
     if (noti == "GPHOTO_UPLOAD") {
       this.sendSocketNotification("UPLOAD", payload)
+    }
+    if (noti == "ERROR_STATUS") {
+      this.errorFlag = payload;
     }
   },
 
@@ -171,6 +174,9 @@ Module.register("MMM-GooglePhotos", {
       infoText.appendChild(albumTitle)
       infoText.appendChild(photoTime)
       info.appendChild(infoText)
+      if (this.errorFlag) {
+        info.classList.add('info-error')
+      }
       console.log("[GPHOTO] Image loaded:", url)
       this.sendSocketNotification("IMAGE_LOADED", url)
     }
@@ -253,6 +259,9 @@ Module.register("MMM-GooglePhotos", {
       infoText.appendChild(albumTitle)
       infoText.appendChild(photoTime)
       info.appendChild(infoText)
+      if (this.errorFlag) {
+        info.classList.add('info-error')
+      }
     }
     src.setAttribute("src", videoUrl)
     hidden.src = url

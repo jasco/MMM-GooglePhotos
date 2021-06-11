@@ -94,3 +94,7 @@
   line-height:100%;
   color:#FFF;
 }
+
+.info-error  {
+    background: red;
+}

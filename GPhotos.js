@@ -53,6 +53,7 @@ function Auth(config, debug=false) {
         })
       }).catch((error) => {
         log("Error refreshing token, ", error.toString())
+        this.emit('error', oauthClient)
       })
     } else {
       log("Token is alive.")
@@ -134,8 +135,11 @@ class GPhotos {
       this.log(e.toString())
       throw e
     }
-    auth.on("ready", (client)=>{
+    auth.on('ready', (client)=>{
       job(client)
+    })
+    auth.on('error', (client)=>{
+      this.error = true;
     })
   }
 
@@ -146,8 +150,11 @@ class GPhotos {
         if (fs.existsSync(fp)) return true
         return false
       }
-      if (isTokenFileExist()) success()
-      fail()
+      if (isTokenFileExist()) {
+        success()
+      } else {
+        fail()
+      }
     })
   }
 
