@@ -199,7 +199,7 @@ module.exports = NodeHelper.create({
           this.log(err.toString())
           console.log(err)
         }
-        sendSocketNotification("ERROR_STATUS", GPhoto.error);
+        this.sendSocketNotification("ERROR_STATUS", GPhotos.error);
       }
       step()
     })
